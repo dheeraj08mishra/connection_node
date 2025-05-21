@@ -1,9 +1,7 @@
 import express from "express";
 import validator from "validator";
 import User from "../models/user.js";
-import { userAuth } from "../middleware/auth.js";
 const authenticationRouter = express.Router();
-import { validateEditProfile } from "../utils/validatonFile.js";
 authenticationRouter.post("/signup", async (req, res) => {
   try {
     const {
@@ -32,13 +30,10 @@ authenticationRouter.post("/signup", async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const hashedPassword = await existingUser.hashPassword(password);
-
     const newUser = new User({
       firstName,
       lastName,
       email,
-      password: hashedPassword,
       age,
       phoneNumber,
       gender,
@@ -46,10 +41,27 @@ authenticationRouter.post("/signup", async (req, res) => {
       hobbies,
       photo,
     });
+    newUser.password = await newUser.hashPassword(password);
 
     await newUser.save();
 
-    res.status(201).json({ message: "User created successfully" });
+    const token = await newUser.getJWT();
+    console.log(process.env.COOKIES_AGE);
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: Number(process.env.COOKIES_AGE),
+    });
+
+    res.status(201).json({
+      message: `Welcome ${firstName}, your account was created successfully`,
+      user: {
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        age: newUser.age,
+        phoneNumber: newUser.phoneNumber,
+      },
+    });
   } catch (error) {
     res
       .status(500)
@@ -73,12 +85,21 @@ authenticationRouter.post("/login", async (req, res) => {
     }
 
     const token = await user.getJWT();
+    console.log(process.env.COOKIES_AGE);
     res.cookie("token", token, {
       httpOnly: true,
       maxAge: Number(process.env.COOKIES_AGE),
     });
-
-    res.send("login successful");
+    res.json({
+      message: `Welcome back ${user.firstName}, you are logged in successfully`,
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        age: user.age,
+      },
+    });
   } catch (error) {
     res
       .status(500)
@@ -88,7 +109,8 @@ authenticationRouter.post("/login", async (req, res) => {
 
 authenticationRouter.post("/logout", async (req, res) => {
   try {
-    res.clearCookie("token");
+    res.clearCookie("token", { httpOnly: true, sameSite: "Strict" });
+
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     res
@@ -113,17 +135,21 @@ authenticationRouter.delete("/delete", async (req, res) => {
   }
 });
 
-authenticationRouter.patch("/updateProfile", userAuth, async (req, res) => {
+authenticationRouter.post("/forgotPassword", async (req, res) => {
   try {
-    if (!validateEditProfile(req, res)) {
-      return res.status(400).json({ message: "Invalid fields to update" });
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
-    const user = await User.findById(req.user._id);
-    Object.keys(req.body).forEach((key) => {
-      user[key] = req.body[key];
+    const token = await user.getJWT();
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: Number(process.env.COOKIES_AGE),
     });
-    await user.save();
-    res.status(201).json({ message: "User updated successfully" });
+    // Here you would send the token to the user's email
+
+    res.status(200).json({ message: "Password reset token sent" });
   } catch (error) {
     return res
       .status(500)

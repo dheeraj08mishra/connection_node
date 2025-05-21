@@ -11,12 +11,6 @@ const userSchema = new Schema(
       required: true,
       minLength: 3,
       maxLength: 20,
-      validate: {
-        validator: function (v) {
-          return /^[a-zA-Z]+$/.test(v);
-        },
-        message: (props) => `${props.value} is not a valid name!`,
-      },
       trim: true,
     },
     lastName: {
@@ -57,9 +51,10 @@ const userSchema = new Schema(
       required: true,
       validate: {
         validator: function (v) {
-          return v.length === 10 && /^[0-9]+$/.test(v);
+          return validator.isMobilePhone(v, "any", {
+            strictMode: false,
+          });
         },
-        message: (props) => `${props.value} is not a valid phone number!`,
       },
       unique: true,
       trim: true,
@@ -68,15 +63,7 @@ const userSchema = new Schema(
     gender: {
       type: String,
       required: true,
-      validate: {
-        validator: function (v) {
-          if (["male", "female", "other"].includes(v)) {
-            return true;
-          } else {
-            throw new Error(`${v} is not valid`);
-          }
-        },
-      },
+      enum: ["male", "female", "other"],
     },
     skills: {
       type: [String],
@@ -99,8 +86,7 @@ const userSchema = new Schema(
       },
     },
     photo: {
-      default:
-        "https://www.google.com/url?sa=i&url=https%3A%2F%2Fsignalvnoise.com%2Fposts%2F3104-behind-the-scenes-reinventing-our-default-profile-pictures&psig=AOvVaw2oku6VaVa-5s2pwZd1bRI7&ust=1746615028355000&source=images&cd=vfe&opi=89978449&ved=0CBUQjRxqFwoTCJijwpfWjo0DFQAAAAAdAAAAABAE",
+      default: "https://s3.amazonaws.com/37assets/svn/765-default-avatar.png",
       type: String,
       validate: {
         validator: function (v) {

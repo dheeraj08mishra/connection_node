@@ -1,4 +1,4 @@
-export const validateEditProfile = (req, res) => {
+export const validateEditProfile = (body) => {
   const fieldsAllowedToUpdate = [
     "firstName",
     "lastName",
@@ -9,16 +9,15 @@ export const validateEditProfile = (req, res) => {
     "skills",
     "hobbies",
     "photo",
+    "gender",
   ];
 
-  const fieldsToUpdate = Object.keys(req.body);
-  if (fieldsToUpdate.length === 0) {
-    return res.status(400).json({ message: "No fields to update" });
-  }
+  const fieldsToUpdate = Object.keys(body);
+  if (fieldsToUpdate.length === 0) return false;
 
-  const isValidOperation = fieldsToUpdate.every((field) => {
-    return fieldsAllowedToUpdate.includes(field);
-  });
+  const isValidOperation = fieldsToUpdate.every((field) =>
+    fieldsAllowedToUpdate.includes(field)
+  );
 
   return isValidOperation;
 };
